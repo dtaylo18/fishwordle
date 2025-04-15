@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fish Wordle</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1rem;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+    }
+    .guess-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .dropdown-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    select, button {
+      padding: 0.5rem;
+      font-size: 1rem;
+      flex: 1;
+    }
+    .result-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .result-box {
+      padding: 0.5rem;
+      color: white;
+      flex: 1;
+      text-align: center;
+      border-radius: 5px;
+    }
+    .green { background-color: green; }
+    .yellow { background-color: orange; }
+    .black { background-color: #444; }
+    .message {
+      font-size: 1.2em;
+      text-align: center;
+      margin-top: 1rem;
+    }
+    #timer {
+      margin-top: 0.5rem;
+      font-weight: bold;
+    }
+    #leaderboard h3 {
+      margin: 1rem 0 0.5rem;
+    }
+    .guess-history {
+      margin-top: 1rem;
+    }
+    .guess-history h3 {
+      margin-bottom: 0.5rem;
+    }
+    .guess-history ul {
+      padding-left: 1.5rem;
+    }
+    .share-btn {
+      background-color: #007BFF;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    .share-btn:hover {
+      background-color: #0056b3;
+    }
+    .fish-facts {
+      margin-top: 1rem;
+      background-color: #f0f8ff;
+      padding: 1rem;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fish Wordle</h1>
+
+  <div class="guess-row">
+    <div class="dropdown-row">
+      <select id="fishSelect">
+        <option value="">-- Choose a Fish --</option>
+      </select>
+    </div>
+    <button onclick="submitGuess()">Submit Guess</button>
+  </div>
+
+  <div id="results"></div>
+  <div id="message" class="message"></div>
+  <div id="timer" class="message">Time: 0s</div>
+  <div id="leaderboard" class="message">
+    <h3>🏆 Leaderboard</h3>
+    <ol id="scoresList"></ol>
+  </div>
+  <div class="guess-history">
+    <h3>📋 Your Guesses</h3>
+    <ul id="guessList"></ul>
+  </div>
+
+  <button id="shareBtn" class="share-btn" style="display:none;" onclick="shareResults()">Share Results</button>
+
+  <script>
+    const fishData = [
+      { 
+        name: "Neon Tetra", 
+        region: "South America", 
+        size: "Small", 
+        parameters: "Soft, Acidic", 
+        colors: "Blue, Red", 
+        family: "Characidae", 
+        facts: [
+          "Neon Tetras are famous for their bright blue body and vibrant red tail.",
+          "They are commonly found in rivers and streams in South America.",
+          "Neon Tetras thrive in schools and can be kept in freshwater aquariums."
+        ]
+      },
+      { 
+        name: "Betta", 
+        region: "Southeast Asia", 
+        size: "Small", 
+        parameters: "Soft, Slightly Acidic", 
+        colors: "Various", 
+        family: "Osphronemidae", 
+        facts: [
+          "Betta fish are known for their territorial behavior, especially the males.",
+          "They have labyrinth organs that allow them to breathe air from the surface.",
+          "Betta fish come in many colors, including red, blue, and purple."
+        ]
+      },
+      { 
+        name: "Discus", 
+        region: "South America", 
+        size: "Large", 
+        parameters: "Soft, Acidic", 
+        colors: "Blue, Red, Yellow", 
+        family: "Cichlidae", 
+        facts: [
+          "Discus fish are known for their round, disc-shaped bodies.",
+          "They are often called the 'king of freshwater fish' due to their beauty and care needs.",
+          "Discus require a very stable water environment to thrive."
+        ]
+      },
+      { 
+        name: "Goldfish", 
+        region: "East Asia", 
+        size: "Large", 
+        parameters: "Hard, Alkaline", 
+        colors: "Orange, White", 
+        family: "Cyprinidae", 
+        facts: [
+          "Goldfish can live for up to 20 years when properly cared for.",
+          "They are one of the most popular pet fish around the world.",
+          "Goldfish are social and should ideally be kept in pairs or groups."
+        ]
+      },
+      { 
+        name: "Corydoras", 
+        region: "South America", 
+        size: "Small", 
+        parameters: "Soft, Neutral", 
+        colors: "Gray, Black", 
+        family: "Callichthyidae", 
+        facts: [
+          "Corydoras are bottom-dwelling fish that help keep your aquarium clean.",
+          "They are peaceful and can be kept with many other species.",
+          "Corydoras are known for their barbels that help them search for food."
+        ]
+      },
+      { 
+        name: "Zebra Danio", 
+        region: "South Asia", 
+        size: "Small", 
+        parameters: "Hard, Neutral", 
+        colors: "Blue, Silver", 
+        family: "Cyprinidae", 
+        facts: [
+          "Zebra Danios are active and schooling fish that do well in groups.",
+          "They are hardy and adapt well to a range of water conditions.",
+          "Zebra Danios are one of the most popular aquarium fish due to their bright striped appearance."
+        ]
+      },
+      { 
+        name: "Guppy", 
+        region: "South America", 
+        size: "Small", 
+        parameters: "Hard, Alkaline", 
+        colors: "Various", 
+        family: "Poeciliidae", 
+        facts: [
+          "Guppies are livebearers, meaning they give birth to live young rather than laying eggs.",
+          "They are highly adaptable and come in a variety of colors and patterns.",
+          "Guppies are great for beginners because they are easy to care for."
+        ]
+      },
+      { 
+        name: "Angelfish", 
+        region: "South America", 
+        size: "Medium", 
+        parameters: "Soft, Slightly Acidic", 
+        colors: "Black, Silver", 
+        family: "Cichlidae", 
+        facts: [
+          "Angelfish have elegant, triangular-shaped bodies and long fins.",
+          "They are aggressive and territorial, especially during breeding.",
+          "Angelfish are often kept in aquariums because of their striking beauty."
+        ]
+      },
+      { 
+        name: "Cherry Barb", 
+        region: "South Asia", 
+        size: "Small", 
+        parameters: "Soft, Slightly Acidic", 
+        colors: "Red", 
+        family: "Cyprinidae", 
+        facts: [
+          "Cherry Barbs are small, peaceful fish that do well in schools.",
+          "Their bright red color is most prominent in males, especially during breeding.",
+          "Cherry Barbs are a great addition to community tanks due to their peaceful nature."
+        ]
+      },
+      { 
+        name: "German Blue Ram", 
+        region: "South America", 
+        size: "Small", 
+        parameters: "Soft, Warm, Acidic", 
+        colors: "Blue, Yellow", 
+        family: "Cichlidae", 
+        facts: [
+          "German Blue Rams are known for their vibrant blue color and yellow accents.",
+          "They require soft and warm water to thrive and are sensitive to poor water quality.",
+          "German Blue Rams are peaceful and can be kept with other small, non-aggressive fish."
+        ]
+      },
+      {
+        name: "Swordtail",
+        region: "Central America",
+        size: "Medium",
+        parameters: "Hard, Alkaline",
+        colors: "Red, Green",
+        family: "Poeciliidae",
+        facts: [
+        "Swordtails are named for the elongated lower part of their tails.",
+        "They are livebearers and easy to breed in home aquariums.",
+        "Males display a distinctive sword-like extension on their tails."
+        ]
+      },
+      {
+        name: "Platy",
+        region: "Central America",
+        size: "Small",
+        parameters: "Hard, Alkaline",
+        colors: "Orange, Black, Yellow",
+        family: "Poeciliidae",
+        facts: [
+        "Platies are peaceful and ideal for beginner aquarists.",
+        "They are livebearers and reproduce easily.",
+        "They come in many vibrant color combinations."
+        ]
+        },
+        {
+        name: "Molly",
+        region: "Central America",
+        size: "Medium",
+        parameters: "Hard, Alkaline",
+        colors: "Black, White, Gold",
+        family: "Poeciliidae",
+        facts: [
+        "Mollies can live in both fresh and brackish water.",
+        "They are social and thrive in groups.",
+        "Mollies are known for their peaceful temperament."
+        ]
+        },
+        {
+        name: "Kuhli Loach",
+        region: "Southeast Asia",
+        size: "Small",
+        parameters: "Soft, Slightly Acidic",
+        colors: "Brown, Yellow",
+        family: "Cobitidae",
+        facts: [
+        "Kuhli Loaches resemble tiny eels and love hiding.",
+        "They are nocturnal and active at night.",
+        "They help clean up leftover food from the substrate."
+        ]
+        }
+        // Uncomment the following fish data to add more options,
+        // {
+        // name: "Otocinclus",
+        // region: "South America",
+        // size: "Small",
+        // parameters: "Soft, Slightly Acidic",
+        // colors: "Brown, White",
+        // family: "Loricariidae",
+        // facts: [
+        // "Otocinclus are great algae eaters for small tanks.",
+        // "They are very sensitive to water quality changes.",
+        // "They prefer being in groups and hiding among plants."
+        // ]
+        // },
+        // {
+        // name: "Harlequin Rasbora",
+        // region: "Southeast Asia",
+        // size: "Small",
+        // parameters: "Soft, Slightly Acidic",
+        // colors: "Orange, Black",
+        // family: "Cyprinidae",
+        // facts: [
+        // "Harlequin Rasboras have a distinct black triangular patch on their bodies.",
+        // "They are schooling fish and do best in groups of 6 or more.",
+        // "They are peaceful and make excellent community fish."
+        // ]
+        // },
+        // {
+        // name: "Boesemani Rainbowfish",
+        // region: "Oceania",
+        // size: "Medium",
+        // parameters: "Moderate, Slightly Alkaline",
+        // colors: "Blue, Yellow",
+        // family: "Melanotaeniidae",
+        // facts: [
+        // "Boesemani Rainbowfish are known for their vivid color split.",
+        // "They are active swimmers and enjoy spacious tanks.",
+        // "Their colors intensify with age and good diet."
+        // ]
+        // },
+        // {
+        // name: "Pearl Gourami",
+        // region: "Southeast Asia",
+        // size: "Medium",
+        // parameters: "Soft, Slightly Acidic",
+        // colors: "White, Orange, Iridescent",
+        // family: "Osphronemidae",
+        // facts: [
+        // "Pearl Gouramis are known for their pearly, iridescent spots and orange throat.",
+        // "They are peaceful and ideal for community tanks.",
+        // "Males develop a red chest during breeding season."
+        // ]
+        // },
+
+        // {
+        // name: "Clown Pleco",
+        // region: "South America",
+        // size: "Small",
+        // parameters: "Soft, Slightly Acidic",
+        // colors: "Brown, Yellow",
+        // family: "Loricariidae",
+        // facts: [
+        // "Clown Plecos are small algae eaters ideal for smaller tanks.",
+        // "They enjoy driftwood to graze and hide around.",
+        // "Despite being plecos, they stay under 4 inches long."
+        // ]
+        // },
+        // {
+        // name: "Panda Corydoras",
+        // region: "South America",
+        // size: "Small",
+        // parameters: "Soft, Slightly Acidic",
+        // colors: "White, Black",
+        // family: "Callichthyidae",
+        // facts: [
+        // "Named for their black eye patches resembling pandas.",
+        // "They are bottom dwellers and thrive in groups.",
+        // "Corydoras help keep the substrate clean."
+        // ]
+        // },
+        // {
+        // name: "Flagtail Prochilodus",
+        // region: "South America",
+        // size: "Large",
+        // parameters: "Moderate, Slightly Acidic",
+        // colors: "Silver, Red, Black",
+        // family: "Prochilodontidae",
+        // facts: [
+        // "Flagtails are active swimmers and need a large tank.",
+        // "They are peaceful but can be boisterous with smaller fish.",
+        // "Their tail has striking black and red bands."
+        // ]
+        // },
+        // {
+        // name: "Sparkling Gourami",
+        // region: "Southeast Asia",
+        // size: "Small",
+        // parameters: "Soft, Slightly Acidic",
+        // colors: "Brown, Iridescent Blue",
+        // family: "Osphronemidae",
+        // facts: [
+        // "They can breathe air with their labyrinth organ.",
+        // "Sparkling Gouramis are one of the smallest gourami species.",
+        // "They make croaking noises when communicating."
+        // ]
+        // },
+        // {
+        // name: "Hillstream Loach",
+        // region: "Southeast Asia",
+        // size: "Small",
+        // parameters: "Cool, Fast-Flowing, Oxygen-Rich",
+        // colors: "Brown, Yellow",
+        // family: "Balitoridae",
+        // facts: [
+        // "Hillstream Loaches look like miniature stingrays.",
+        // "They require high oxygen and water movement.",
+        // "Excellent for algae control in well-oxygenated tanks."
+        // ]
+        // },
+        // {
+        // name: "Ember Tetra",
+        // region: "South America",
+        // size: "Small",
+        // parameters: "Soft, Slightly Acidic",
+        // colors: "Orange",
+        // family: "Characidae",
+        // facts: [
+        // "Ember Tetras are vibrant and peaceful schooling fish.",
+        // "They contrast beautifully with green plants.",
+        // "Best kept in large schools for confidence and activity."
+        // ]
+        // },
+        // {
+        // name: "Kribensis",
+        // region: "West Africa",
+        // size: "Small",
+        // parameters: "Moderate, Slightly Acidic",
+        // colors: "Purple, Yellow, Black",
+        // family: "Cichlidae",
+        // facts: [
+        // "Kribensis are colorful dwarf cichlids.",
+        // "They often breed readily in home aquariums.",
+        // "They are territorial during breeding but otherwise peaceful."
+        // ]
+        // }
+    ];
+
+    let secretFish;
+    let guesses = 0;
+    let gameOver = false;
+    let startTime;
+    let timerInterval;
+    let resultsGrid = [];
+
+    const maxGuesses = 6;
+    const fishSelect = document.getElementById("fishSelect");
+    fishData.forEach(fish => {
+      const option = document.createElement("option");
+      option.value = fish.name;
+      option.textContent = fish.name;
+      fishSelect.appendChild(option);
+    });
+
+    let guessMultiplier = 1.5; // Higher multiplier for more guesses
+
+    function startNewGame() {
+      // Ensure the fish changes daily
+      const today = new Date().toDateString();
+      const lastPlayedDate = localStorage.getItem("lastPlayedDate");
+
+      if (today !== lastPlayedDate) {
+        secretFish = fishData[Math.floor(Math.random() * fishData.length)];
+        localStorage.setItem("lastPlayedDate", today);
+      } else {
+        secretFish = fishData[Math.floor(Math.random() * fishData.length)];
+      }
+
+      guesses = 0;
+      gameOver = false;
+      startTime = Date.now();
+      resultsGrid = [];
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        document.getElementById("timer").textContent = `Time: ${elapsed}s`;
+      }, 1000);
+
+      document.getElementById("fishSelect").disabled = false;
+      document.querySelector("button").disabled = false;
+      document.getElementById("results").innerHTML = "";
+      document.getElementById("guessList").innerHTML = "";
+      document.getElementById("message").textContent = "";
+      document.getElementById("shareBtn").style.display = "none";
+      document.getElementById("fishFacts").innerHTML = "";
+    }
+
+    function submitGuess() {
+      if (gameOver) return;
+      const guessName = fishSelect.value;
+      if (!guessName) return alert("Please select a fish!");
+      const guessedFish = fishData.find(f => f.name === guessName);
+      guesses++;
+
+      const resultRow = document.createElement("div");
+      resultRow.classList.add("result-row");
+
+      const rowResult = [];
+      ["region", "size", "parameters", "colors", "family"].forEach(attr => {
+        const box = document.createElement("div");
+        box.classList.add("result-box");
+        const guessedVal = guessedFish[attr];
+        const correctVal = secretFish[attr];
+
+        const guessedParts = guessedVal.split(/,\s*/);
+        const correctParts = correctVal.split(/,\s*/);
+
+        const exactMatch = guessedParts.length === correctParts.length && guessedParts.every(p => correctParts.includes(p));
+        const partialMatch = guessedParts.some(p => correctParts.includes(p));
+
+        if (exactMatch) {
+          box.classList.add("green");
+          rowResult.push("🟩");
+        } else if (partialMatch) {
+          box.classList.add("yellow");
+          rowResult.push("🟨");
+        } else {
+          box.classList.add("black");
+          rowResult.push("⬛");
+        }
+        box.textContent = guessedVal;
+        resultRow.appendChild(box);
+      });
+
+      document.getElementById("results").appendChild(resultRow);
+
+      const guessList = document.getElementById("guessList");
+      const guessItem = document.createElement("li");
+      guessItem.textContent = guessName;
+      guessList.appendChild(guessItem);
+
+      resultsGrid.push(rowResult.join(" "));
+
+      if (guessedFish.name === secretFish.name) {
+        endGame(true);
+      } else if (guesses >= maxGuesses) {
+        endGame(false);
+      }
+    }
+
+    function endGame(win) {
+      clearInterval(timerInterval);
+      gameOver = true;
+      const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      const score = timeTaken + (guesses * guessMultiplier); // Weighted score based on guesses and time
+      const msg = win
+        ? `🎉 Congratulations! You guessed ${secretFish.name} in ${timeTaken}s with a score of ${score.toFixed(2)}`
+        : `❌ Out of guesses. The correct fish was ${secretFish.name}. Your score was: ${score.toFixed(2)}`;
+      document.getElementById("message").textContent = msg;
+      document.getElementById("fishSelect").disabled = true;
+      document.querySelector("button").disabled = true;
+
+      if (win) {
+        updateLeaderboard(score);
+      }
+
+      const restartBtn = document.createElement("button");
+      restartBtn.textContent = "New Game";
+      restartBtn.onclick = startNewGame;
+      document.getElementById("message").appendChild(document.createElement("br"));
+      document.getElementById("message").appendChild(restartBtn);
+
+      document.getElementById("shareBtn").style.display = "inline-block";
+
+      // Display fish facts
+      const fishFacts = document.createElement("div");
+      fishFacts.classList.add("fish-facts");
+      fishFacts.innerHTML = `<h3>Quick Facts about ${secretFish.name}:</h3>
+        <ul>
+          ${secretFish.facts.map(fact => `<li>${fact}</li>`).join('')}
+        </ul>`;
+      document.getElementById("message").appendChild(fishFacts);
+    }
+
+    function shareResults() {
+      const resultText = resultsGrid.join("\n");
+      const shareText = `Fish Wordle Results\n\n${resultText}`;
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert("Results copied to clipboard! Share them on social media or with your friends.");
+      });
+    }
+
+    function updateLeaderboard(score) {
+      const playerName = prompt("Enter your name for the leaderboard:"); // Ask for player name
+      const leaderboard = JSON.parse(localStorage.getItem("fishWordleScores")) || [];
+
+      leaderboard.push({ name: playerName, score: score });
+      leaderboard.sort((a, b) => a.score - b.score); // Sort by score (ascending)
+      const top5 = leaderboard.slice(0, 5); // Get top 5 scores
+      localStorage.setItem("fishWordleScores", JSON.stringify(top5));
+      renderLeaderboard(top5);
+    }
+
+    function renderLeaderboard(leaderboard) {
+      const list = document.getElementById("scoresList");
+      list.innerHTML = "";
+      leaderboard.forEach((entry, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${index + 1}. ${entry.name} - ${entry.score.toFixed(2)} points`;
+        list.appendChild(li);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const existingScores = JSON.parse(localStorage.getItem("fishWordleScores")) || [];
+      renderLeaderboard(existingScores);
+      startNewGame();
+    });
+  </script>
+</body>
+</html>
